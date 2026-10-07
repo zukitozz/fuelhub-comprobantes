@@ -1,39 +1,73 @@
 // app/api/comprobantes/route.ts
 //
 // BFF (regla de arquitectura, igual que fuelhub-web): el navegador solo
-// habla con /api/* de este mismo proyecto. Este handler arma `numeracion`
-// (serie-correlativo) y llama a GET /v1/comprobantes/{numeracion}?ruc=...
-// de FuelHub Cloud con el token M2M propio (comprobantes.read).
+// habla con /api/* de este mismo proyecto. Este handler valida el captcha y
+// llama a GET /v1/comprobantes/consulta de FuelHub Cloud con el token M2M
+// propio (comprobantes.read).
+//
+// Contrato de FuelHub:
+//   rucEmisor, numeroDocumentoReceptor, anio -> requeridos
+//   mes                                      -> opcional (ZIP del mes)
+//   dia + serie + correlativo                -> opcionales, los 3 juntos (un PDF)
 
 import { NextRequest, NextResponse } from "next/server";
+import { verificarCaptcha } from "@/lib/captcha";
 import { FuelHubApiError, fuelhubFetch } from "@/lib/fuelhub/client";
 import type { ComprobanteConsulta } from "@/lib/fuelhub/types";
 
+function badRequest(message: string, error = "PARAMETROS_INVALIDOS") {
+  return NextResponse.json({ error, message }, { status: 400 });
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const ruc = searchParams.get("ruc")?.trim() ?? "";
-  const serie = searchParams.get("serie")?.trim() ?? "";
-  const correlativo = searchParams.get("correlativo")?.trim() ?? "";
+  const get = (k: string) => searchParams.get(k)?.trim() ?? "";
 
-  if (!ruc || !serie || !correlativo) {
-    return NextResponse.json(
-      { error: "PARAMETROS_INVALIDOS", message: "RUC, serie y correlativo son requeridos." },
-      { status: 400 }
-    );
+  const rucEmisor = get("rucEmisor");
+  const numeroDocumentoReceptor = get("numeroDocumentoReceptor");
+  const anio = get("anio");
+  const mes = get("mes");
+  const dia = get("dia");
+  const serie = get("serie").toUpperCase();
+  const correlativo = get("correlativo");
+
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  const captchaOk = await verificarCaptcha(request.headers.get("x-captcha-token"), ip);
+  if (!captchaOk) {
+    return badRequest("No pudimos verificar el captcha. Inténtalo de nuevo.", "CAPTCHA_INVALIDO");
   }
 
-  const numeracion = `${serie}-${correlativo}`;
+  if (!/^\d{11}$/.test(rucEmisor)) return badRequest("El RUC debe tener 11 dígitos.");
+  if (!numeroDocumentoReceptor) return badRequest("El documento del receptor es requerido.");
+  if (!/^\d{4}$/.test(anio)) return badRequest("El año no es válido.");
+  if (mes && !/^(0?[1-9]|1[0-2])$/.test(mes)) return badRequest("El mes no es válido.");
+
+  const datosPuntuales = [dia, serie, correlativo].filter(Boolean).length;
+  if (datosPuntuales !== 0 && datosPuntuales !== 3) {
+    return badRequest("Para buscar un comprobante puntual completa día, serie y correlativo.");
+  }
+  if (datosPuntuales === 3 && !mes) {
+    return badRequest("Para buscar un comprobante puntual indica también el mes.");
+  }
 
   try {
-    const data = await fuelhubFetch<ComprobanteConsulta>(`/v1/comprobantes/${encodeURIComponent(numeracion)}`, {
-      query: { ruc },
+    const data = await fuelhubFetch<ComprobanteConsulta>("/v1/comprobantes/consulta", {
+      query: {
+        rucEmisor,
+        numeroDocumentoReceptor,
+        anio,
+        mes: mes ? mes.padStart(2, "0") : undefined,
+        dia: dia ? dia.padStart(2, "0") : undefined,
+        serie: serie || undefined,
+        correlativo: correlativo || undefined,
+      },
     });
     return NextResponse.json(data);
   } catch (err) {
     if (err instanceof FuelHubApiError) {
       return NextResponse.json(err.body, { status: err.status });
     }
-    console.error("Error consultando comprobante:", err);
+    console.error("Error consultando comprobantes:", err);
     return NextResponse.json({ error: "ERROR_INTERNO", message: "Ocurrió un error inesperado." }, { status: 500 });
   }
 }

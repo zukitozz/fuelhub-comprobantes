@@ -227,3 +227,19 @@ footer {
   font-size: 12px;
   padding: 24px;
 }
+
+.row3 {
+  display: grid;
+  grid-template-columns: 0.7fr 1fr 1.2fr;
+  gap: 12px;
+}
+
+.field select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 15px;
+  background: var(--surface);
+  color: var(--ink);
+}
