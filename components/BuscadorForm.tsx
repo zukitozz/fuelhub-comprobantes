@@ -65,8 +65,8 @@ export default function BuscadorForm() {
       setEstado({ tipo: "error", mensaje: "Para un comprobante puntual completa día, serie y correlativo." });
       return;
     }
-    if (puntuales === 3 && !mes) {
-      setEstado({ tipo: "error", mensaje: "Para un comprobante puntual elige también el mes." });
+    if (!mes) {
+      setEstado({ tipo: "error", mensaje: "Elige el mes." });
       return;
     }
     if (!captchaToken) {
@@ -81,7 +81,7 @@ export default function BuscadorForm() {
         numeroDocumentoReceptor: receptorLimpio,
         anio: anio.trim(),
       });
-      if (mes) params.set("mes", mes);
+      params.set("mes", mes);
       if (puntuales === 3) {
         params.set("dia", diaLimpio);
         params.set("serie", serieLimpia);
@@ -141,9 +141,9 @@ export default function BuscadorForm() {
             <input id="anio" inputMode="numeric" maxLength={4} value={anio} onChange={(e) => setAnio(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="mes">Mes (opcional)</label>
+            <label htmlFor="mes">Mes</label>
             <select id="mes" value={mes} onChange={(e) => setMes(e.target.value)}>
-              <option value="">Todo el año</option>
+              <option value="">Elige un mes</option>
               {MESES.map((nombre, i) => (
                 <option key={nombre} value={String(i + 1).padStart(2, "0")}>
                   {nombre}
@@ -152,10 +152,10 @@ export default function BuscadorForm() {
             </select>
           </div>
         </div>
-        <p className="hint">Sin más datos descargas un ZIP con todos tus comprobantes del periodo.</p>
+        <p className="hint">Sin más datos descargas un ZIP con todos tus comprobantes del mes.</p>
 
         <p className="hint" style={{ marginTop: 16 }}>
-          ¿Buscas un comprobante puntual? Completa día, serie y correlativo (y elige el mes):
+          ¿Buscas un comprobante puntual? Completa día, serie y correlativo:
         </p>
         <div className="row3">
           <div className="field">
