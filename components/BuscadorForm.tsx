@@ -205,13 +205,20 @@ export default function BuscadorForm() {
 
 function Resultado({ comprobante }: { comprobante: ComprobanteConsulta }) {
   const ETIQUETAS: Record<string, string> = { FACTURA: "Factura", BOLETA: "Boleta" };
-  const etiquetaTipo = comprobante.urlZip
-    ? "Comprobantes del periodo"
+  const esMasivo = comprobante.modo === "masivo";
+  const etiquetaTipo = esMasivo
+    ? "Comprobantes del mes"
     : (ETIQUETAS[comprobante.tipoComprobante ?? ""] ?? "Comprobante");
+  const urlPrincipal = comprobante.url ?? comprobante.urlPdf;
 
   return (
     <div className="resultado">
       <span className="tipo">{etiquetaTipo}</span>
+      {esMasivo && comprobante.cantidad !== undefined && (
+        <p className="numeracion">
+          {comprobante.cantidad} {comprobante.cantidad === 1 ? "comprobante" : "comprobantes"}
+        </p>
+      )}
       {comprobante.numeracion && <p className="numeracion">{comprobante.numeracion}</p>}
 
       <div className="detalle">
@@ -238,14 +245,9 @@ function Resultado({ comprobante }: { comprobante: ComprobanteConsulta }) {
       </div>
 
       <div className="descargas">
-        {comprobante.urlZip && (
-          <a className="principal" href={comprobante.urlZip} target="_blank" rel="noreferrer">
-            Descargar ZIP
-          </a>
-        )}
-        {comprobante.urlPdf && (
-          <a className="principal" href={comprobante.urlPdf} target="_blank" rel="noreferrer">
-            Descargar PDF
+        {urlPrincipal && (
+          <a className="principal" href={urlPrincipal} target="_blank" rel="noreferrer">
+            {esMasivo ? "Descargar ZIP" : "Descargar PDF"}
           </a>
         )}
         {comprobante.urlXml && (
@@ -259,6 +261,11 @@ function Resultado({ comprobante }: { comprobante: ComprobanteConsulta }) {
           </a>
         )}
       </div>
+      {comprobante.expiraEnSegundos !== undefined && (
+        <p className="hint">
+          El enlace vence en {Math.round(comprobante.expiraEnSegundos / 60)} min. Si caduca, vuelve a buscar.
+        </p>
+      )}
     </div>
   );
 }
