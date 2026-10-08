@@ -7,7 +7,7 @@
 //
 // Contrato de FuelHub:
 //   rucEmisor, numeroDocumentoReceptor, anio -> requeridos
-//   mes                                      -> opcional (ZIP del mes)
+//   mes                                      -> requerido por nosotros (ZIP del mes)
 //   dia + serie + correlativo                -> opcionales, los 3 juntos (un PDF)
 
 import { NextRequest, NextResponse } from "next/server";
@@ -40,14 +40,12 @@ export async function GET(request: NextRequest) {
   if (!/^\d{11}$/.test(rucEmisor)) return badRequest("El RUC debe tener 11 dígitos.");
   if (!numeroDocumentoReceptor) return badRequest("El documento del receptor es requerido.");
   if (!/^\d{4}$/.test(anio)) return badRequest("El año no es válido.");
-  if (mes && !/^(0?[1-9]|1[0-2])$/.test(mes)) return badRequest("El mes no es válido.");
+  // El mes es obligatorio a proposito: evita ZIP del año completo (costo y timeouts).
+  if (!/^(0?[1-9]|1[0-2])$/.test(mes)) return badRequest("Elige un mes válido.");
 
   const datosPuntuales = [dia, serie, correlativo].filter(Boolean).length;
   if (datosPuntuales !== 0 && datosPuntuales !== 3) {
     return badRequest("Para buscar un comprobante puntual completa día, serie y correlativo.");
-  }
-  if (datosPuntuales === 3 && !mes) {
-    return badRequest("Para buscar un comprobante puntual indica también el mes.");
   }
 
   try {
@@ -56,7 +54,7 @@ export async function GET(request: NextRequest) {
         rucEmisor,
         numeroDocumentoReceptor,
         anio,
-        mes: mes ? mes.padStart(2, "0") : undefined,
+        mes: mes.padStart(2, "0"),
         dia: dia ? dia.padStart(2, "0") : undefined,
         serie: serie || undefined,
         correlativo: correlativo || undefined,
