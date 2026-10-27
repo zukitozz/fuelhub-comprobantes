@@ -4,10 +4,10 @@ export default function Page() {
   return (
     <main>
       <div className="card">
-        <h1>Busca tu comprobante</h1>
+        <h1>Busca tus comprobantes</h1>
         <p className="lead">
-          Ingresa el RUC del negocio, la serie y el número (correlativo) de tu boleta o factura
-          para ver y descargar el comprobante.
+          Ingresa el RUC del negocio, tu documento (DNI o RUC) y el mes para descargar todos tus
+          comprobantes en un ZIP, o indica día, serie y correlativo para descargar uno solo.
         </p>
         <BuscadorForm />
       </div>
